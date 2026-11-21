@@ -1,0 +1,4 @@
+# iPad : l'écran s'éteint au verrouillage. Home le rallume sur l'écran verrouillé (1bis.png).
+appId: com.apple.springboard
+---
+- pressKey: Home

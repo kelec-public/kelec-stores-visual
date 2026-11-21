@@ -25,15 +25,17 @@ raw/android/<langue>/…                téléphone Android
 `<n>bis.png` ajoute un second appareil sur le visuel `n`, sur n'importe quelle cible.
 Une capture absente dans une langue est reprise du français, avec un avertissement à la fin.
 
-## Capture automatique (iPhone)
+## Capture automatique (iPhone, iPad)
 
 ```bash
 node capture/capture-ios.mjs                 # 21 langues, ~1 à 2 min par langue
 node capture/capture-ios.mjs --lang fr,de    # certaines langues
 node capture/capture-ios.mjs --no-home       # sans le visuel 1
+node capture/capture-ios.mjs --device ipad   # iPad (simulateur iPad Pro 13-inch (M5), 2064×2752)
 ```
 
-Prérequis, une fois : un seul simulateur iPhone démarré (iPhone 18 Pro, 6.3"), Kelec installé et connecté
+Prérequis, une fois par appareil : un seul simulateur de ce type démarré (iPhone 18 Pro 6.3", ou iPad Pro 13-inch (M5)),
+Kelec installé et connecté
 au compte démo, widgets Kelec sur la **première page** de l'écran d'accueil et sur l'écran verrouillé,
 Maestro installé (`brew install mobile-dev-inc/tap/maestro`).
 

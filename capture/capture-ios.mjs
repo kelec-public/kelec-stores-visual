@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Prend les captures brutes iPhone dans chaque langue, sur le simulateur démarré.
+// Prend les captures brutes iPhone ou iPad dans chaque langue, sur le simulateur démarré.
 //
-//   node capture/capture-ios.mjs                  toutes les langues
+//   node capture/capture-ios.mjs                  iPhone, toutes les langues
+//   node capture/capture-ios.mjs --device ipad    iPad (raw/ipad/)
 //   node capture/capture-ios.mjs --lang fr,de     certaines langues
 //   node capture/capture-ios.mjs --no-home        sans le visuel 1 (écran d'accueil + écran verrouillé)
 //
@@ -20,7 +21,12 @@ import { chromium } from 'playwright-core';
 import { LANGS } from '../config.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const RAW = resolve(HERE, '../raw/iphone');
+
+// Simulateur visé (un seul démarré par type) et cible de generate.mjs.
+const DEVICES = {
+  iphone: { match: /iPhone/, target: 'ios-iphone-6.3', wakeAfterLock: false },
+  ipad: { match: /iPad/, target: 'ios-ipad-13', wakeAfterLock: true },
+};
 
 // Langue iOS et région de chaque langue de l'app (pt = Portugal, pas Brésil).
 const LOCALES = {
@@ -35,6 +41,10 @@ const args = process.argv.slice(2);
 const langArg = args.indexOf('--lang');
 const langs = langArg >= 0 ? args[langArg + 1].split(',') : LANGS;
 const withHome = !args.includes('--no-home');
+const deviceArg = args.indexOf('--device');
+const kind = deviceArg >= 0 ? args[deviceArg + 1] : 'iphone';
+if (!DEVICES[kind]) throw new Error(`Appareil inconnu : ${kind} (${Object.keys(DEVICES).join(', ')})`);
+const RAW = resolve(HERE, '../raw', kind);
 
 const run = (cmd, cmdArgs, opts = {}) => execFileSync(cmd, cmdArgs, { encoding: 'utf8', ...opts });
 const simctl = (...a) => run('xcrun', ['simctl', ...a]);
@@ -42,8 +52,8 @@ const sleep = (s) => run('sleep', [String(s)]);
 
 function bootedDevice() {
   const { devices } = JSON.parse(simctl('list', 'devices', 'booted', '-j'));
-  const booted = Object.values(devices).flat().filter((d) => d.state === 'Booted' && /iPhone/.test(d.name));
-  if (booted.length !== 1) throw new Error(`Il faut exactement un simulateur iPhone démarré (trouvés : ${booted.length})`);
+  const booted = Object.values(devices).flat().filter((d) => d.state === 'Booted' && DEVICES[kind].match.test(d.name));
+  if (booted.length !== 1) throw new Error(`Il faut exactement un simulateur ${kind} démarré (trouvés : ${booted.length})`);
   return booted[0];
 }
 
@@ -75,8 +85,12 @@ function freezeStatusBar(udid) {
     '--wifiBars', '3', '--cellularMode', 'active', '--cellularBars', '4', '--batteryState', 'charged', '--batteryLevel', '100');
 }
 
+// Après un redémarrage, le pilote XCTest de Maestro met parfois plus que le délai par défaut à démarrer.
 function maestro(udid, flow, extra = []) {
-  run('maestro', ['--device', udid, 'test', ...extra, join(HERE, flow)], { stdio: 'inherit' });
+  run('maestro', ['--device', udid, 'test', ...extra, join(HERE, flow)], {
+    stdio: 'inherit',
+    env: { ...process.env, MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000' },
+  });
 }
 
 // Part de pixels colorés (parcs, Seine, lieux) sur la carte plein écran (3.png). Quand les tuiles Apple Plans
@@ -109,7 +123,13 @@ async function captureApp(page, udid, out) {
   const tmp = join(HERE, '.maestro-out');
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     rmSync(tmp, { recursive: true, force: true });
-    maestro(udid, 'ios-app.yaml', [`--test-output-dir=${tmp}`]);
+    try {
+      maestro(udid, 'ios-app.yaml', [`--test-output-dir=${tmp}`]);
+    } catch {
+      console.log(`  parcours Maestro en échec, essai ${attempt}/${ATTEMPTS}`);
+      if (attempt < ATTEMPTS) sleep(20 * attempt);
+      continue;
+    }
     for (const f of readdirSync(tmp, { recursive: true })) {
       if (/takeScreenshot\/\d\.png$/.test(f)) copyFileSync(join(tmp, f), join(out, f.split('/').pop()));
     }
@@ -144,11 +164,15 @@ for (const lang of langs) {
   if (withHome) {
     freezeStatusBar(device.udid); // de nouveau : l'heure de l'écran verrouillé n'est pas toujours figée au premier essai
     maestro(device.udid, 'ios-lock.yaml');
+    if (DEVICES[kind].wakeAfterLock) {
+      sleep(2);
+      maestro(device.udid, 'ios-wake.yaml');
+    }
     sleep(3);
     simctl('io', device.udid, 'screenshot', join(out, '1bis.png'));
   }
 }
 
 await browser.close();
-if (failed.length) console.log(`\n! Carte non chargée pour : ${failed.join(', ')}. Relancer avec --lang ${failed.join(',')}`);
-console.log(`\nCaptures dans ${RAW}. Visuels : node generate.mjs --target ios-iphone-6.3`);
+if (failed.length) console.log(`\n! Parcours ou carte en échec pour : ${failed.join(', ')}. Relancer avec --lang ${failed.join(',')}`);
+console.log(`\nCaptures dans ${RAW}. Visuels : node generate.mjs --target ${DEVICES[kind].target}`);
