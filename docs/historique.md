@@ -53,4 +53,27 @@ Ce qui a été fait pour produire les visuels App Store, dans l'ordre, avec les 
 - **Reste à faire :**
   - Écran verrouillé grec (iPhone et iPad) à l'heure réelle au lieu de 9:41 : relancer `--lang el` à 9:41 ou 21:41.
   - Titre du visuel 5 (« Préchauffage ») à aligner ou non sur le nom dans l'app (« Confort thermique »).
-  - Android (captures, cadre, parcours) et l'image de présentation Play Store (1024×500).
+  - Android : voir plus bas.
+  - L'image de présentation Play Store (1024×500).
+
+## Android (23 novembre)
+
+| Choix | Pourquoi |
+|---|---|
+| Émulateur `Pixel_10a` (Android 17) | Déjà installé ; un émulateur donne le même rendu d'une langue à l'autre. |
+| `cmd locale set-device-locale` plutôt qu'un redémarrage avec `-change-locale` | Disponible depuis Android 15, sans root ni redémarrage : le lanceur, les widgets et l'app suivent la langue. |
+| Langue du système plutôt que la langue de l'app (`set-app-locales`) | Le visuel 1 montre l'écran d'accueil : la date et les noms d'apps doivent aussi être traduits. |
+| Même parcours Maestro qu'iOS | Les `testID` React Native sont lus comme des `id` sur Android aussi. |
+| Pas de second appareil au visuel 1 | Pas de widgets sur l'écran verrouillé d'un téléphone Android. |
+| Cadre tiré de l'habillage de l'émulateur, passé en noir | Google ne publie pas de bezels comme Apple ; l'habillage du Pixel 10a a déjà l'écran transparent et la caméra. Le corail d'origine jurait avec le dégradé orange. |
+| Code commun iOS / Android dans `capture/common.mjs` | Langues, essais du parcours, vérification de la carte. |
+
+| Problème | Solution |
+|---|---|
+| Barre d'état : « 3G », deux icônes wifi | Réseau mobile caché dans le mode démo. |
+| Icônes de notifications (bouclier Safety Center) malgré `notifications -e visible false` | Notifications mises en sourdine une heure (`cmd notification snooze`). |
+| Kelec debug installé sur l'émulateur : « Unable to load script » sans Metro | Installer une build release avant la capture. |
+
+État : script, parcours, cadre et doc prêts ; changement de langue, barre d'état et capture de l'accueil testés.
+**Reste** : installer Kelec release sur l'émulateur, connecter le compte démo, remplir les widgets, puis lancer
+la capture et vérifier le parcours Maestro (pas encore testé sur Android).

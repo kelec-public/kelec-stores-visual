@@ -13,14 +13,11 @@
 // Par langue : langue du simulateur + redémarrage (les widgets et l'écran verrouillé suivent la langue du système),
 // barre d'état figée, 1.png (écran d'accueil), 2 à 5 via Maestro (ios-app.yaml), 1bis.png (écran verrouillé).
 
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, rmSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { LANGS } from '../config.mjs';
-
-const HERE = dirname(fileURLToPath(import.meta.url));
+import { HERE, LOCALES, captureApp, maestro, parseArgs, run, sleep } from './common.mjs';
 
 // Simulateur visé (un seul démarré par type) et cible de generate.mjs.
 const DEVICES = {
@@ -28,27 +25,12 @@ const DEVICES = {
   ipad: { match: /iPad/, target: 'ios-ipad-13', wakeAfterLock: true },
 };
 
-// Langue iOS et région de chaque langue de l'app (pt = Portugal, pas Brésil).
-const LOCALES = {
-  bg: ['bg', 'bg_BG'], ca: ['ca', 'ca_ES'], cs: ['cs', 'cs_CZ'], da: ['da', 'da_DK'], de: ['de', 'de_DE'],
-  el: ['el', 'el_GR'], en: ['en', 'en_US'], es: ['es', 'es_ES'], fi: ['fi', 'fi_FI'], fr: ['fr', 'fr_FR'],
-  hr: ['hr', 'hr_HR'], hu: ['hu', 'hu_HU'], it: ['it', 'it_IT'], nb: ['nb', 'nb_NO'], nl: ['nl', 'nl_NL'],
-  pl: ['pl', 'pl_PL'], pt: ['pt-PT', 'pt_PT'], ro: ['ro', 'ro_RO'], sl: ['sl', 'sl_SI'], sv: ['sv', 'sv_SE'],
-  tr: ['tr', 'tr_TR'],
-};
-
-const args = process.argv.slice(2);
-const langArg = args.indexOf('--lang');
-const langs = langArg >= 0 ? args[langArg + 1].split(',') : LANGS;
-const withHome = !args.includes('--no-home');
-const deviceArg = args.indexOf('--device');
-const kind = deviceArg >= 0 ? args[deviceArg + 1] : 'iphone';
+const { langs, withHome, value } = parseArgs(LANGS);
+const kind = value('--device') ?? 'iphone';
 if (!DEVICES[kind]) throw new Error(`Appareil inconnu : ${kind} (${Object.keys(DEVICES).join(', ')})`);
 const RAW = resolve(HERE, '../raw', kind);
 
-const run = (cmd, cmdArgs, opts = {}) => execFileSync(cmd, cmdArgs, { encoding: 'utf8', ...opts });
 const simctl = (...a) => run('xcrun', ['simctl', ...a]);
-const sleep = (s) => run('sleep', [String(s)]);
 
 function bootedDevice() {
   const { devices } = JSON.parse(simctl('list', 'devices', 'booted', '-j'));
@@ -85,63 +67,6 @@ function freezeStatusBar(udid) {
     '--wifiBars', '3', '--cellularMode', 'active', '--cellularBars', '4', '--batteryState', 'charged', '--batteryLevel', '100');
 }
 
-// Après un redémarrage, le pilote XCTest de Maestro met parfois plus que le délai par défaut à démarrer.
-function maestro(udid, flow, extra = []) {
-  run('maestro', ['--device', udid, 'test', ...extra, join(HERE, flow)], {
-    stdio: 'inherit',
-    env: { ...process.env, MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000' },
-  });
-}
-
-// Part de pixels colorés (parcs, Seine, lieux) sur la carte plein écran (3.png). Quand les tuiles Apple Plans
-// ne sont pas chargées, la carte n'est qu'une grille beige : la part tombe à ~0.
-async function mapColorRatio(page, path) {
-  const src = `data:image/png;base64,${readFileSync(path).toString('base64')}`;
-  return page.evaluate(async (url) => {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const c = document.createElement('canvas');
-    c.width = 200; c.height = 200;
-    const ctx = c.getContext('2d');
-    // Zone de la carte, sans la barre d'état ni les boutons du bas.
-    ctx.drawImage(img, 0, img.height * 0.15, img.width, img.height * 0.7, 0, 0, 200, 200);
-    const d = ctx.getImageData(0, 0, 200, 200).data;
-    let colored = 0;
-    for (let i = 0; i < d.length; i += 4) {
-      if (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) > 45) colored++;
-    }
-    return colored / (d.length / 4);
-  }, src);
-}
-
-const MAP_MIN_RATIO = 0.03;
-const ATTEMPTS = 4;
-
-// Visuels 2 à 5. Maestro n'écrit ses captures que dans son dossier de sortie (sous-dossiers datés) : on les recopie.
-async function captureApp(page, udid, out) {
-  const tmp = join(HERE, '.maestro-out');
-  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-    rmSync(tmp, { recursive: true, force: true });
-    try {
-      maestro(udid, 'ios-app.yaml', [`--test-output-dir=${tmp}`]);
-    } catch {
-      console.log(`  parcours Maestro en échec, essai ${attempt}/${ATTEMPTS}`);
-      if (attempt < ATTEMPTS) sleep(20 * attempt);
-      continue;
-    }
-    for (const f of readdirSync(tmp, { recursive: true })) {
-      if (/takeScreenshot\/\d\.png$/.test(f)) copyFileSync(join(tmp, f), join(out, f.split('/').pop()));
-    }
-    rmSync(tmp, { recursive: true, force: true });
-    const ratio = await mapColorRatio(page, join(out, '3.png'));
-    if (ratio >= MAP_MIN_RATIO) return true;
-    console.log(`  carte vide (${(ratio * 100).toFixed(1)} % de couleur), essai ${attempt}/${ATTEMPTS}`);
-    if (attempt < ATTEMPTS) sleep(20 * attempt); // laisse le temps aux tuiles de se charger
-  }
-  return false;
-}
-
 const device = bootedDevice();
 console.log(`Simulateur : ${device.name} (${device.udid})`);
 const browser = await chromium.launch({ channel: 'chrome' });
@@ -159,7 +84,7 @@ for (const lang of langs) {
 
   if (withHome) simctl('io', device.udid, 'screenshot', join(out, '1.png'));
 
-  if (!(await captureApp(page, device.udid, out))) failed.push(lang);
+  if (!(await captureApp(page, device.udid, 'ios-app.yaml', out))) failed.push(lang);
 
   if (withHome) {
     freezeStatusBar(device.udid); // de nouveau : l'heure de l'écran verrouillé n'est pas toujours figée au premier essai
