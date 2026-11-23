@@ -1,5 +1,5 @@
 # Visuels 2 à 5 : l'app, déjà connectée au compte démo, dans la langue du simulateur.
-# Lancé par capture-ios.mjs, qui recopie les captures (takeScreenshot/<n>.png) dans raw/iphone/<langue>/.
+# Lancé par capture-ios.mjs, qui recopie les captures (takeScreenshot/<n>.png) dans raw/<appareil>/<langue>/.
 appId: com.kelyanselme.MyRenault
 ---
 - launchApp:

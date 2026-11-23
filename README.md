@@ -1,62 +1,59 @@
-# Visuels stores
+# Visuels stores Kelec
 
-Génère les visuels App Store et Play Store dans les 21 langues de l'app, à partir des captures d'écran brutes.
-La mise en page reprend le template Figma `stores-screens` : dégradé orange continu sur les 5 visuels,
-titre en NouvelR (police dans `fonts/`), téléphone sous le titre.
+Génère les visuels App Store (et bientôt Play Store) de Kelec dans les 21 langues de l'app.
+Deux étapes, chacune en une commande :
 
-```bash
-cd store-visuals
-npm install                                    # une fois (utilise Google Chrome installé sur le Mac)
-node generate.mjs                              # tout
-node generate.mjs --target ios-iphone-6.3 --lang fr,en
-```
-
-Sortie : `out/<cible>/<langue>/01.png … 05.png`, plus `panorama.png` pour relire les 5 visuels d'un coup.
-
-## Captures brutes
-
-```
-raw/iphone/<langue>/1.png … 5.png     iPhone 6.3" (1206×2622, simulateur iPhone 18 Pro), captures du simulateur sans retouche
-raw/iphone/<langue>/1bis.png          second téléphone du visuel 1 (écran verrouillé)
-raw/ipad/<langue>/…                   iPad 13"
-raw/android/<langue>/…                téléphone Android
-```
-
-`<n>bis.png` ajoute un second appareil sur le visuel `n`, sur n'importe quelle cible.
-Une capture absente dans une langue est reprise du français, avec un avertissement à la fin.
-
-## Capture automatique (iPhone, iPad)
+1. **Capture** : les captures d'écran brutes sont prises sur le simulateur iOS, langue par langue, par un script
+   (Maestro + `simctl`) → `raw/<appareil>/<langue>/`.
+2. **Génération** : chaque capture est posée dans un cadre d'appareil, sous un titre traduit, sur le dégradé du
+   template Figma → `out/<cible>/<langue>/01.png … 05.png`.
 
 ```bash
-node capture/capture-ios.mjs                 # 21 langues, ~1 à 2 min par langue
-node capture/capture-ios.mjs --lang fr,de    # certaines langues
-node capture/capture-ios.mjs --no-home       # sans le visuel 1
-node capture/capture-ios.mjs --device ipad   # iPad (simulateur iPad Pro 13-inch (M5), 2064×2752)
+npm install                                              # une fois
+
+# Capture (simulateur démarré, voir docs/capture-ios.md)
+node capture/capture-ios.mjs                             # iPhone, 21 langues
+node capture/capture-ios.mjs --device ipad               # iPad, 21 langues
+node capture/capture-ios.mjs --device ipad --lang fr,de  # quelques langues
+
+# Génération
+node generate.mjs                                        # toutes les cibles qui ont des captures
+node generate.mjs --target ios-iphone-6.3 --lang fr      # une cible, une langue
 ```
 
-Prérequis, une fois par appareil : un seul simulateur de ce type démarré (iPhone 18 Pro 6.3", ou iPad Pro 13-inch (M5)),
-Kelec installé et connecté
-au compte démo, widgets Kelec sur la **première page** de l'écran d'accueil et sur l'écran verrouillé,
-Maestro installé (`brew install mobile-dev-inc/tap/maestro`).
+| Cible | Taille | Simulateur | Cadre |
+|---|---|---|---|
+| `ios-iphone-6.3` | 1206×2622 | iPhone 18 Pro | `frames/iphone.png` (Product Bezel Apple) |
+| `ios-ipad-13` | 2064×2752 | iPad Pro 13-inch (M5) | `frames/ipad.png` (Product Bezel Apple) |
+| `android-phone` | 1440×2560 | — (pas encore fait) | `frames/android.png` ou cadre CSS |
 
-Pour chaque langue, le script change la langue du simulateur et le redémarre : les widgets, l'écran verrouillé et l'app
-suivent la langue du système. Il fige la barre d'état (9:41), capture l'écran d'accueil (`1.png`), parcourt l'app avec
-Maestro (`capture/ios-app.yaml`, visuels 2 à 5) puis verrouille et capture l'écran verrouillé (`1bis.png`).
-Ne pas toucher au simulateur pendant la capture.
+App Store Connect ne demande que ces deux tailles iOS (iPhone 6.3", iPad 13").
 
-## Cibles (`config.mjs`)
+## Les 5 visuels
 
-| Cible | Taille | Cadre |
+| # | Titre (fr) | Écran |
 |---|---|---|
-| `ios-iphone-6.3` | 1206×2622 | `frames/iphone.png` (Product Bezel Apple) |
-| `ios-ipad-13` | 2064×2752 | `frames/ipad.png` (Product Bezel Apple, iPad Pro 13") |
-| `android-phone` | 1440×2560 | `frames/android.png` si présent, sinon cadre dessiné en CSS |
+| 1 | Votre voiture / à portée de main | Écran d'accueil avec les widgets (`1.png`) + écran verrouillé (`1bis.png`) |
+| 2 | Suivez votre / E-TECH | Page voiture |
+| 3 | Et localisez-la / au mètre près | Carte plein écran |
+| 4 | Suivez et filtrez / vos recharges | Historique des charges, filtre « 5kWh < Énergie ajoutée » |
+| 5 | Préchauffage / à distance | Feuille de confort thermique ouverte |
 
+## Documentation
 
-**Changer de cadre** : déposer un PNG avec l'écran transparent (ex. les « Product Bezels » d'Apple).
-Le script trouve tout seul la zone de l'écran et le rayon de ses coins. Pas de code à modifier.
+- [docs/capture-ios.md](docs/capture-ios.md) : préparer le simulateur, lancer la capture, dépanner.
+- [docs/generation.md](docs/generation.md) : mise en page, cadres, textes, ajouter une cible.
+- [docs/historique.md](docs/historique.md) : ce qui a été fait, les choix et les problèmes rencontrés.
 
-## Textes (`texts.json`)
+## Arborescence
 
-Deux lignes par visuel : la première en blanc, la seconde en gras bleu.
-Une ligne trop longue est réduite pour tenir dans la largeur. Sous 80 %, le script prévient qu'il faut la raccourcir.
+```
+capture/      capture-ios.mjs (orchestration), ios-app.yaml / ios-lock.yaml / ios-wake.yaml (parcours Maestro)
+config.mjs    langues, couleurs, tailles et positions par cible
+generate.mjs  génération des visuels (HTML + Chrome via playwright-core)
+texts.json    titres des 5 visuels dans les 21 langues
+fonts/        NouvelR Regular et Bold (copiées de kelec-app/assets/fonts/Renault)
+frames/       cadres d'appareils, écran transparent
+raw/          captures brutes : raw/<iphone|ipad|android>/<langue>/<n>.png
+out/          visuels générés (ignoré par git)
+```
