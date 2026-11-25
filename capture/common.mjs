@@ -44,7 +44,7 @@ export function maestro(device, flow, extra = []) {
 
 // Part de pixels colorés (parcs, eau, lieux) sur la carte plein écran (3.png). Quand les tuiles ne sont pas
 // chargées, la carte n'est qu'une grille beige ou grise : la part tombe à ~0.
-async function mapColorRatio(page, path) {
+export async function mapColorRatio(page, path) {
   const src = `data:image/png;base64,${readFileSync(path).toString('base64')}`;
   return page.evaluate(async (url) => {
     const img = new Image();

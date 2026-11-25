@@ -15,7 +15,9 @@ import { FALLBACK_LANG, LANGS, STYLE, TARGETS } from './config.mjs';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const FONTS = join(ROOT, 'fonts');
 const TEXTS = JSON.parse(readFileSync(join(ROOT, 'texts.json'), 'utf8'));
-const SLIDE_COUNT = TEXTS.fr.length;
+
+// Titres d'une cible : tous ceux de texts.json, ou seulement ceux listés dans `slides` (indices, base 0).
+const textsFor = (target, lang) => (target.slides ? target.slides.map((i) => TEXTS[lang][i]) : TEXTS[lang]);
 
 function parseArgs(argv) {
   const args = {};
@@ -47,7 +49,7 @@ function buildHtml(targetName, target, lang, warnings) {
   const framePath = join(ROOT, target.frame);
   // En data URL : le canvas qui détecte l'écran ne peut pas lire les pixels d'un fichier file://.
   const frame = existsSync(framePath) ? `data:image/png;base64,${readFileSync(framePath).toString('base64')}` : null;
-  const texts = TEXTS[lang];
+  const texts = textsFor(target, lang);
 
   const slots = texts.map(([line1, line2], i) => {
     const n = i + 1;
@@ -105,8 +107,14 @@ function buildHtml(targetName, target, lang, warnings) {
     const cy = Math.round(h / 2), cx = Math.round(w / 4); // à gauche du centre, pour éviter l'encoche / l'île
     let left = Math.round(w / 2); while (left > 0 && !opaque(left - 1, cy)) left--;
     let right = Math.round(w / 2); while (right < w - 1 && !opaque(right + 1, cy)) right++;
-    let top = cy; while (top > 0 && !opaque(cx, top - 1)) top--;
-    let bottom = cy; while (bottom < h - 1 && !opaque(cx, bottom + 1)) bottom++;
+    // Colonnes à 1/4, 1/2 et 3/4 : la plus haute et la plus basse. À 1/4, le coin arrondi d'un écran très arrondi
+    // (Apple Watch) rogne le trou ; au centre, l'île de l'iPhone le rogne, d'où le min / max.
+    let top = h, bottom = 0;
+    for (const x of [cx, Math.round(w / 2), Math.round((3 * w) / 4)]) {
+      let t = cy; while (t > 0 && !opaque(x, t - 1)) t--;
+      let b = cy; while (b < h - 1 && !opaque(x, b + 1)) b++;
+      top = Math.min(top, t); bottom = Math.max(bottom, b);
+    }
     // Sur la diagonale depuis le coin du trou : parfois d'abord hors du téléphone (transparent), puis le cadre,
     // puis l'écran. Le bord de l'écran est le premier pixel transparent après le cadre.
     let d = 0, inFrame = false;
@@ -208,7 +216,7 @@ async function main() {
       continue;
     }
 
-    const page = await browser.newPage({ viewport: { width: target.width * SLIDE_COUNT, height: target.height } });
+    const page = await browser.newPage({ viewport: { width: target.width * textsFor(target, 'fr').length, height: target.height } });
     for (const lang of langs) {
       if (!TEXTS[lang]) {
         warnings.push(`${lang} : pas de textes dans texts.json`);
@@ -224,7 +232,7 @@ async function main() {
 
       const outDir = join(ROOT, 'out', targetName, lang);
       mkdirSync(outDir, { recursive: true });
-      for (let i = 0; i < SLIDE_COUNT; i++) {
+      for (let i = 0; i < textsFor(target, 'fr').length; i++) {
         await page.screenshot({
           path: join(outDir, `${String(i + 1).padStart(2, '0')}.png`),
           clip: { x: i * target.width, y: 0, width: target.width, height: target.height },

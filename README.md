@@ -27,6 +27,7 @@ node generate.mjs --target ios-iphone-6.3 --lang fr      # une cible, une langue
 | `ios-iphone-6.3` | 1206×2622 | iPhone 18 Pro | `frames/iphone.png` (Product Bezel Apple) |
 | `ios-ipad-13` | 2064×2752 | iPad Pro 13-inch (M5) | `frames/ipad.png` (Product Bezel Apple) |
 | `android-phone` | 1440×2560 | Pixel 10a (émulateur) | `frames/android.png` (habillage de l'émulateur) |
+| `ios-watch-ultra` | 422×514 | Apple Watch Ultra 4 | `frames/watch.png` (Product Bezel Apple), 3 visuels : voiture, carte, préchauffage ([docs/capture-watch.md](docs/capture-watch.md)) |
 
 App Store Connect ne demande que ces deux tailles iOS (iPhone 6.3", iPad 13"). Sur Android, le visuel 1 n'a que
 l'écran d'accueil (pas de widgets sur l'écran verrouillé d'un téléphone Android).

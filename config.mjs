@@ -56,4 +56,17 @@ export const TARGETS = {
     // Cadre CSS utilisé si frames/android.png n'existe pas.
     cssFrame: { bezel: 0.028, radius: 0.12, screenRadius: 0.095, camera: 0.032 },
   },
+  // Apple Watch Ultra 4 : 422×514, une des tailles acceptées par App Store Connect (la plus grande).
+  // 3 visuels seulement, avec les titres 1, 3 et 5 de texts.json (« Votre voiture à portée de main »,
+  // « Et localisez-la », « Préchauffage »). Positions à ajuster quand le cadre frames/watch.png sera posé.
+  'ios-watch-ultra': {
+    store: 'ios',
+    width: 422,
+    height: 514,
+    frame: 'frames/watch.png',
+    raw: 'watch',
+    slides: [0, 2, 4],
+    title: { top: 28, fontSize: 36, sideMargin: 20 },
+    device: { top: 130, height: 380, bisOffset: 0 },
+  },
 };

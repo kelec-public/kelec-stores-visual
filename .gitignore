@@ -3,3 +3,4 @@ node_modules/
 capture/.maestro-out/
 capture/.probe.png
 .DS_Store
+capture/.bin/
