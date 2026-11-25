@@ -11,7 +11,8 @@
 // première page de l'écran d'accueil ; Maestro installé. Ne pas toucher à l'émulateur pendant la capture.
 //
 // Par langue : langue du système (cmd locale set-device-locale, sans redémarrage : l'app, le lanceur et les widgets
-// suivent), barre d'état figée (mode démo), 1.png (écran d'accueil), 2 à 5 via Maestro (android-app.yaml).
+// suivent), barre d'état figée (mode démo), 2 à 5 via Maestro (android-app.yaml), puis 1.png (écran d'accueil,
+// une fois les widgets chargés).
 // Pas de 1bis.png : un téléphone Android n'a pas de widgets sur l'écran verrouillé, le visuel 1 n'a qu'un appareil.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -78,14 +79,33 @@ function freezeStatusBar() {
     '-e eri hide -e mute hide -e speakerphone hide -e zen hide -e managed_profile hide');
 }
 
+// Textes affichés par les widgets Kelec sur l'écran d'accueil (vide tant qu'un widget montre son logo de chargement).
+function widgetTexts() {
+  shell('uiautomator dump /sdcard/kelec-ui.xml');
+  const xml = shell('cat /sdcard/kelec-ui.xml');
+  return [...xml.matchAll(/text="([^"]+)"[^>]*package="([^"]+)"/g)]
+    .filter((m) => m[2] === APP_ID)
+    .map((m) => m[1])
+    .join('|');
+}
+
 // Écran d'accueil, première page. Deux appuis sur Home : le second ramène à la première page.
-// Les widgets se redessinent après le changement de langue : on attend qu'ils aient fini.
+// Après un changement de langue, les widgets se redessinent (logo de chargement) : on attend qu'ils affichent
+// leurs données, identiques sur deux relevés de suite, avant la capture (60 s au plus).
 function captureHome(out) {
   shell('wm dismiss-keyguard');
   shell('input keyevent KEYCODE_HOME');
   sleep(1);
   shell('input keyevent KEYCODE_HOME');
-  sleep(8);
+  sleep(3);
+  let previous = '';
+  for (let i = 0; i < 20; i++) {
+    const texts = widgetTexts();
+    if (texts && texts === previous) break;
+    if (i === 19) console.log('  ! widgets pas chargés après 60 s, capture quand même');
+    previous = texts;
+    sleep(3);
+  }
   screenshot(join(out, '1.png'));
 }
 
@@ -106,8 +126,12 @@ try {
 
     setLanguage(lang);
     freezeStatusBar();
-    if (withHome) captureHome(out);
     if (withApp && !(await captureApp(page, serial, 'android-app.yaml', out))) failed.push(lang);
+    // Après l'app : son passage rafraîchit les widgets dans la nouvelle langue.
+    if (withHome) {
+      freezeStatusBar();
+      captureHome(out);
+    }
   }
 } finally {
   await browser.close();

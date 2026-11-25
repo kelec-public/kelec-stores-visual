@@ -18,10 +18,16 @@ Il le pilote par `adb` et Maestro : **ne pas toucher à l'émulateur pendant la 
    ```
    Un seul appareil branché, sinon passer `--serial emulator-5554`.
 2. **Kelec en release** (`com.myrenaultplus`). Une build debug sans Metro s'arrête sur « Unable to load script ».
+   Dans Android Studio : *Build › Select Build Variant*, `:app` en `release`, puis Run. Ou :
    ```bash
-   cd ../kelec-app/android && ./gradlew installRelease
+   cd ../kelec-app/android && ./gradlew :app:installRelease
    ```
-3. **Compte démo** connecté (`kelec-demo@gmail.com` / `demo`), Mégane E-Tech en charge, **tarif d'électricité saisi**.
+   **Toujours `:app:`.** Un `./gradlew installRelease` sans module installe aussi `:wear`, qui a le même
+   `applicationId` : l'app de la montre remplace celle du téléphone. Son `versionCode` (2000300) étant plus grand,
+   il faut ensuite désinstaller complètement l'app (connexion et widgets perdus) pour remettre celle du téléphone.
+3. **Compte démo** connecté (`kelec-demo@gmail.com` / `demo`) : Renault, « Demo car » (AA-001-AA), Megane E-Tech
+   60 kWh / AC 22 kW, renommée « Megane E-Tech » (onglet Compte), **tarif fixe 0,20 €/kWh** depuis le début
+   (Historique des charges › bandeau du tarif), comme sur iOS.
 4. **Widgets Kelec** sur la **première page** de l'écran d'accueil, remplis (pas le logo gris de chargement).
 5. **Maestro** installé (`brew install mobile-dev-inc/tap/maestro`), **aucun proxy sur le Mac**.
 
@@ -46,9 +52,11 @@ node generate.mjs --target android-phone
 2. Fige la barre d'état avec le mode démo de SystemUI (`com.android.systemui.demo`) : 9:41, wifi plein, batterie pleine,
    ni réseau mobile ni icônes d'état. Les notifications sont mises en sourdine pour une heure
    (`cmd notification snooze`) : sur Android 17, le mode démo ne cache plus leurs icônes.
-3. `1.png` : Home deux fois (le second appui revient à la première page), 8 s pour les widgets, `screencap`.
-4. Visuels 2 à 5 : parcours Maestro `capture/android-app.yaml`, le même que sur iOS (mêmes `testID`), avec la même
+3. Visuels 2 à 5 : parcours Maestro `capture/android-app.yaml`, le même que sur iOS (mêmes `testID`), avec la même
    vérification de la carte et les mêmes essais (voir [capture-ios.md](capture-ios.md)).
+4. `1.png`, après l'app (son passage rafraîchit les widgets dans la nouvelle langue) : Home deux fois (le second
+   appui revient à la première page), puis attente que les widgets affichent leurs textes (`uiautomator dump`,
+   textes du paquet `com.myrenaultplus` identiques sur deux relevés à 3 s d'écart, 60 s au plus), puis `screencap`.
 
 À la fin, la langue de départ et la vraie barre d'état sont remises.
 

@@ -73,7 +73,8 @@ Ce qui a été fait pour produire les visuels App Store, dans l'ordre, avec les 
 | Barre d'état : « 3G », deux icônes wifi | Réseau mobile caché dans le mode démo. |
 | Icônes de notifications (bouclier Safety Center) malgré `notifications -e visible false` | Notifications mises en sourdine une heure (`cmd notification snooze`). |
 | Kelec debug installé sur l'émulateur : « Unable to load script » sans Metro | Installer une build release avant la capture. |
+| `./gradlew installRelease` a installé l'app Wear OS (même `applicationId`) par-dessus celle du téléphone ; retour impossible (`INSTALL_FAILED_VERSION_DOWNGRADE`, 2000300 > 300) | Désinstallation complète, `./gradlew :app:installRelease`, compte démo reconfiguré (connexion, nom, tarif). |
 
-État : script, parcours, cadre et doc prêts ; changement de langue, barre d'état et capture de l'accueil testés.
-**Reste** : installer Kelec release sur l'émulateur, connecter le compte démo, remplir les widgets, puis lancer
-la capture et vérifier le parcours Maestro (pas encore testé sur Android).
+| Visuel 1 pris avant le chargement du widget (logo gris) après le changement de langue | L'accueil est capturé après le parcours de l'app, une fois que les textes du widget (lus par `uiautomator dump`) sont affichés et stables. |
+
+État : 21 langues capturées et générées (~1 min 30 par langue, aucun essai raté).
