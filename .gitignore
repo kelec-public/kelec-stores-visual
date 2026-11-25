@@ -1,6 +1,12 @@
-out/
+# Les visuels finaux (out/) sont versionnés ; seuls les aperçus et fichiers temporaires sont ignorés.
+out/**/panorama.png
+out/.tmp/
+out/.feature.html
 node_modules/
-capture/.maestro-out/
+capture/.maestro-# Les visuels finaux (out/) sont versionnés ; seuls les aperçus et fichiers temporaires sont ignorés.
+out/**/panorama.png
+out/.tmp/
+out/.feature.html
 capture/.probe.png
 .DS_Store
 capture/.bin/

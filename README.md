@@ -30,6 +30,8 @@ node generate.mjs --target ios-iphone-6.3 --lang fr      # une cible, une langue
 | `ios-watch-ultra` | 422×514 | Apple Watch Ultra 4 | `frames/watch.png` (Product Bezel Apple), 3 visuels : voiture, carte, préchauffage ([docs/capture-watch.md](docs/capture-watch.md)) |
 | `android-wear` | 1080×1080 | Wear OS XL Round (émulateur) | `frames/wear.png` (habillage de l'émulateur), mêmes 3 visuels ([docs/capture-wear.md](docs/capture-wear.md)) |
 
+L'**image de présentation Play Store** (1024×500, titre du visuel 1 + téléphone + montre) se génère à part : `node generate-feature.mjs` → `out/play-feature/<langue>.png`.
+
 App Store Connect ne demande que ces deux tailles iOS (iPhone 6.3", iPad 13"). Sur Android, le visuel 1 n'a que
 l'écran d'accueil (pas de widgets sur l'écran verrouillé d'un téléphone Android).
 
