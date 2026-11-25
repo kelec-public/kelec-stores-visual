@@ -69,4 +69,16 @@ export const TARGETS = {
     title: { top: 28, fontSize: 36, sideMargin: 20 },
     device: { top: 130, height: 380, bisOffset: 0 },
   },
+  // Wear OS : la Play Console veut des captures carrées (1:1, de 384 à 3840 px). Cadre rond tiré de l'habillage de
+  // l'émulateur (sdk/skins/wearos_xl_round/device_bezel.png), écran 480×480 rond. Mêmes 3 visuels que l'Apple Watch.
+  'android-wear': {
+    store: 'android',
+    width: 1080,
+    height: 1080,
+    frame: 'frames/wear.png',
+    raw: 'wear',
+    slides: [0, 2, 4],
+    title: { top: 70, fontSize: 92, sideMargin: 50 },
+    device: { top: 330, height: 700, bisOffset: 0, round: true }, // écran rond : coins = demi-largeur
+  },
 };

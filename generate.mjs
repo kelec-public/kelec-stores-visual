@@ -62,7 +62,7 @@ function buildHtml(targetName, target, lang, warnings) {
       .map((s, k) => (k === 0 || s ? { src: s ? url(s.path) : '', top: device.top + k * device.bisOffset * device.height } : null))
       .filter(Boolean)
       .map(
-        (d) => `<div class="device" style="top:${d.top}px;height:${device.height}px">
+        (d) => `<div class="device"${device.round ? ' data-round' : ''} style="top:${d.top}px;height:${device.height}px">
           <div class="screen">${d.src ? `<img class="shot" src="${d.src}">` : ''}</div>
           ${frame ? `<img class="frame" src="${frame}">` : ''}
         </div>`,
@@ -142,7 +142,7 @@ function buildHtml(targetName, target, lang, warnings) {
         left: hole.left * k + 'px', top: hole.top * k + 'px',
         width: hole.width * k + 'px', height: hole.height * k + 'px',
         // Même arrondi que le trou du cadre : les coins de la capture ne dépassent pas.
-        borderRadius: hole.radius * k + 'px',
+        borderRadius: (el.hasAttribute('data-round') ? Math.min(hole.width, hole.height) / 2 : hole.radius) * k + 'px',
       });
       return;
     }
